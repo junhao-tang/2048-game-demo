@@ -77,7 +77,8 @@ class _WrapperWidgetState extends State<WrapperWidget> {
             ),
           );
         } else {
-          if (!widget.gameRef.generateRandom(2)) {
+          widget.gameRef.generateRandom(2);
+          if (widget.gameRef.noMoreMove) {
             showDialog<String>(
               context: context,
               builder: (BuildContext context) => AlertDialog(

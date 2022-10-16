@@ -26,8 +26,8 @@ class Node {
 
 class Game extends ChangeNotifier {
   static const int puzzleSize = 4; // 4x4
-  static const int spawn = 2; // spawn 2
   static const int goal = 2048;
+  static const int initialValue = 2;
 
   final Map<int, Node> data = {};
   int _highest = 0;
@@ -61,41 +61,66 @@ class Game extends ChangeNotifier {
         if (data[mappedIdx] != null) {
           if (lastMerger < lastEmpty) {
             var mergerIdx = mapper[i][lastMerger];
-            var sum = data[mergerIdx]!.value + data[mappedIdx]!.value;
-            if (sum > _highest) _highest = sum;
-            data[mergerIdx]!.value = sum;
-            data.remove(mappedIdx);
+            var mergingTarget = data[mergerIdx]!;
+            if (data[mappedIdx]!.value == mergingTarget.value) {
+              var sum = mergingTarget.value + data[mappedIdx]!.value;
+              if (sum > _highest) _highest = sum;
+              data[mergerIdx]!.value = sum;
+              data.remove(mappedIdx);
+              lastMerger++;
+              continue;
+            }
             lastMerger++;
-          } else {
-            // shift to last empty position
+          }
+          // shift to last empty position
+          if (j != lastEmpty) {
             var emptyIdx = mapper[i][lastEmpty];
             data[emptyIdx] = data[mappedIdx]!;
             data.remove(mappedIdx);
-            lastEmpty++;
           }
+          lastEmpty++;
         }
       }
     }
     notifyListeners();
   }
 
-  bool generateRandom(int count) {
-    if (puzzleSize * puzzleSize - data.length < count) return false;
+  int generateRandom(int count) {
+    var generating = min(count, emptySpaces);
     var availables =
         List<int>.generate(puzzleSize * puzzleSize, (index) => index)
             .toSet()
             .difference(
               data.keys.toSet(),
             )
-            .toList();
-    for (int i = 0; i < count; i++) {
-      data[availables[_rand.nextInt(availables.length)]] = Node(
-        1,
+            .toList()
+          ..shuffle();
+    for (int i = 0; i < generating; i++) {
+      data[availables[i]] = Node(
+        initialValue,
       );
     }
     notifyListeners();
+    return generating;
+  }
+
+  Node getNode(int i, int j) => data[i * puzzleSize + j]!;
+  bool get isWon => _highest >= goal;
+  bool get noMoreMove {
+    if (emptySpaces > 0) return false;
+    for (int i = 0; i < puzzleSize; i++) {
+      for (int j = 0; j < puzzleSize; j++) {
+        var currentValue = getNode(i, j).value;
+        if (i < puzzleSize - 1 && currentValue == getNode(i + 1, j).value) {
+          return false;
+        }
+        if (j < puzzleSize - 1 && currentValue == getNode(i, j + 1).value) {
+          return false;
+        }
+      }
+    }
     return true;
   }
 
-  bool get isWon => _highest >= goal;
+  int get emptySpaces => puzzleSize * puzzleSize - data.length;
 }
